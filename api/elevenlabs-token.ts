@@ -1,27 +1,44 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import fetch from "node-fetch";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Allow CORS for your Framer and Acriolab domains
+  res.setHeader("Access-Control-Allow-Origin", "https://www.acriolab.com");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight OPTIONS request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+  const ELEVENLABS_AGENT_ID = process.env.ELEVENLABS_AGENT_ID;
+
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_AGENT_ID) {
+    return res.status(500).json({ error: "Missing env vars" });
+  }
+
   try {
-    const agentId = process.env.ELEVENLABS_AGENT_ID;
-    const apiKey = process.env.ELEVENLABS_API_KEY;
+    // Fetch a realtime conversation token from ElevenLabs
+    const response = await fetch(`https://api.elevenlabs.io/v1/convai/token`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ agent_id: ELEVENLABS_AGENT_ID }),
+    });
 
-    if (!agentId || !apiKey) {
-      return res.status(500).json({ error: "Missing env vars" });
+    const data = await response.json();
+    if (!data?.token) {
+      throw new Error("Failed to generate token");
     }
 
-    const r = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agentId}`,
-      { headers: { "xi-api-key": apiKey } }
-    );
-
-    if (!r.ok) {
-      const text = await r.text();
-      return res.status(500).send(text);
-    }
-
-    const body = await r.json();
-    res.status(200).json({ token: body.token });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    // Return token to frontend
+    return res.status(200).json({ token: data.token });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 }
