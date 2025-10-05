@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const r = await fetch("https://api.elevenlabs.io/v1/convai/token", {
+    const r = await fetch("https://api.elevenlabs.io/v1/convai/conversation", {
       method: "POST",
       headers: {
         "xi-api-key": apiKey,
