@@ -1,37 +1,27 @@
-export default async function handler(req, res) {
-  // --- CORS ---
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  const agentId = process.env.ELEVENLABS_AGENT_ID;
-  if (!apiKey || !agentId) {
-    console.error("Missing env vars");
-    return res.status(500).json({ error: "Missing env vars" });
-  }
-
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const r = await fetch("https://api.elevenlabs.io/v1/convai/conversation", {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ agent_id: agentId }),
-    });
+    const agentId = process.env.ELEVENLABS_AGENT_ID;
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+
+    if (!agentId || !apiKey) {
+      return res.status(500).json({ error: "Missing env vars" });
+    }
+
+    const r = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agentId}`,
+      { headers: { "xi-api-key": apiKey } }
+    );
 
     if (!r.ok) {
       const text = await r.text();
-      console.error("ElevenLabs response:", text);
-      return res.status(r.status).json({ error: text });
+      return res.status(500).send(text);
     }
 
-    const data = await r.json();
-    return res.status(200).json({ token: data.token });
-  } catch (err) {
-    console.error("Unhandled error:", err);
-    return res.status(500).json({ error: err.message });
+    const body = await r.json();
+    res.status(200).json({ token: body.token });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 }
