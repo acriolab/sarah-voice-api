@@ -2,7 +2,17 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // --- CORS setup ---
-  res.setHeader("Access-Control-Allow-Origin", "https://www.simonkrivda.com");
+  const allowedOrigins = [
+    "https://www.simonkrivda.com",
+    "https://framer.com",
+    "https://www.framer.com",
+    "https://framerusercontent.com",
+  ];
+  const origin = req.headers.origin || "";
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Max-Age", "86400");
